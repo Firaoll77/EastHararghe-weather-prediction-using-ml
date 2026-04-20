@@ -1,0 +1,3 @@
+# Place your trained ML model files here:
+# - rainfall_model.pkl (trained model)
+# - scaler.pkl (feature scaler)
