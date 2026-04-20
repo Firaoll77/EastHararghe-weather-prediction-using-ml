@@ -14,7 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { CloudSun, Eye, EyeOff, CheckCircle } from "lucide-react"
+import { CloudSun, Eye, EyeOff, CheckCircle, AlertCircle } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
 
 const userRoles = [
   { value: "resident", label: "Local Resident", description: "Access general forecasts and public alerts" },
@@ -39,6 +40,8 @@ export default function RegisterPage() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -50,11 +53,60 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError(null)
     
-    // Simulate registration - replace with actual registration logic
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    const supabase = createClient()
     
-    router.push("/dashboard")
+    const { error: signUpError } = await supabase.auth.signUp({
+      email: formData.email,
+      password: formData.password,
+      options: {
+        emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ?? 
+          `${window.location.origin}/auth/callback`,
+        data: {
+          full_name: formData.name,
+          role: formData.role || 'resident',
+          location: formData.location,
+        },
+      },
+    })
+    
+    if (signUpError) {
+      setError(signUpError.message)
+      setIsLoading(false)
+      return
+    }
+    
+    setSuccess(true)
+    setIsLoading(false)
+  }
+
+  if (success) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4 py-12">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-background to-background" />
+        
+        <Card className="relative w-full max-w-md border-border/50 bg-card/80 backdrop-blur">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent/20">
+              <CheckCircle className="h-6 w-6 text-accent" />
+            </div>
+            <CardTitle className="text-2xl">Check your email</CardTitle>
+            <CardDescription>
+              We&apos;ve sent a confirmation link to <strong>{formData.email}</strong>. 
+              Please click the link to verify your account.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center">
+            <Link href="/auth/login">
+              <Button variant="outline" className="w-full">
+                Back to Sign In
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -122,6 +174,13 @@ export default function RegisterPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {error && (
+              <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                {error}
+              </div>
+            )}
+            
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
@@ -158,6 +217,7 @@ export default function RegisterPage() {
                     type={showPassword ? "text" : "password"}
                     placeholder="Create a strong password"
                     required
+                    minLength={6}
                     value={formData.password}
                     onChange={(e) =>
                       setFormData({ ...formData, password: e.target.value })
@@ -177,6 +237,9 @@ export default function RegisterPage() {
                     )}
                   </Button>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Must be at least 6 characters
+                </p>
               </div>
 
               <div className="space-y-2">
