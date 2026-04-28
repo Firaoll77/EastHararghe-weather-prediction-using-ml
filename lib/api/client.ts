@@ -63,12 +63,13 @@ async function refreshAccessToken(): Promise<string | null> {
   if (!tokens?.refresh) return null;
   
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/refresh/`, {
+    const url = buildUrl(API_ENDPOINTS.auth.verify); // Use verify as a fallback for refresh check
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ refresh: tokens.refresh }),
+      body: JSON.stringify({ token: tokens.access }), // Verify current token
     });
     
     if (!response.ok) {

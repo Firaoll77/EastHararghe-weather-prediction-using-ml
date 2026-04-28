@@ -21,8 +21,19 @@ class Settings(BaseSettings):
         'Kersa': {'latitude': 9.4167, 'longitude': 42.1167},
         'Kurfachu': {'latitude': 9.2500, 'longitude': 41.9167},
         'Mullu': {'latitude': 9.3333, 'longitude': 42.0833},
-        'Meta': {'latitude': 9.0833, 'longitude': 42.2500}
+        'Meta': {'latitude': 9.0833, 'longitude': 42.2500},
+        'Fedis': {'latitude': 9.1167, 'longitude': 42.0500},
+        'Gursum': {'latitude': 9.3500, 'longitude': 42.4167},
+        'Gola Oda': {'latitude': 8.9833, 'longitude': 42.4333},
+        'Midega Tola': {'latitude': 9.2000, 'longitude': 42.2167},
+        'Jarso': {'latitude': 9.4833, 'longitude': 42.2333},
+        'Meyumuluke': {'latitude': 8.8167, 'longitude': 42.4500},
+        'Midhaga Tola': {'latitude': 9.1500, 'longitude': 42.3000},
+        'Harar': {'latitude': 9.3117, 'longitude': 42.1194},
+        'Dire Dawa': {'latitude': 9.5931, 'longitude': 41.8661},
+        'Kombolcha': {'latitude': 9.4333, 'longitude': 42.1000}
     }
+
     
     WOREDA_NAMES: List[str] = list(EAST_HARARGHE_WOREDAS.keys())
     

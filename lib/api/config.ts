@@ -2,8 +2,9 @@
  * API configuration for the Weather Prediction Backend.
  */
 
-// API base URL - defaults to localhost for development
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+// API base URL - empty = use Next.js rewrites proxy (recommended for browser compatibility)
+// Set NEXT_PUBLIC_API_URL only for production or direct backend access
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL : '';
 
 // API endpoints
 export const API_ENDPOINTS = {

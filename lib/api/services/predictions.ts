@@ -41,10 +41,43 @@ export async function makePrediction(
 ): Promise<ApiResponse<PredictionResponse>> {
   const woreda = getWoredaName(data.location_id);
   // FastAPI uses GET for prediction with woreda parameter
-  return api.get<PredictionResponse>(API_ENDPOINTS.weather.predict, {
+  const response = await api.get<any>(API_ENDPOINTS.weather.predict, {
     params: { woreda },
     skipAuth: true, // Allow anonymous predictions
   });
+
+  if (response.success && response.data) {
+    // Map to UI structure
+    const mappedData: PredictionResponse = {
+      prediction_id: 0,
+      location: {
+        id: data.location_id,
+        name: response.data.location,
+        coordinates: [0, 0],
+      },
+      input_features: {
+        temperature: response.data.features.TS,
+        humidity: response.data.features.RH2M,
+        pressure: response.data.features.PS,
+        wind_speed: response.data.features.WS2M,
+        cloudiness: response.data.features.CLOUD_AMT,
+      },
+      prediction: {
+        rainfall_mm: response.data.prediction,
+        category: response.data.prediction > 5 ? 'moderate' : 'light',
+        category_label: response.data.prediction > 5 ? 'Moderate Rain' : 'Light Rain/None',
+        confidence: 0.85,
+      },
+      model_info: {
+        version: '1.0.0',
+        type: 'Random Forest',
+      },
+      predicted_at: response.data.timestamp,
+    };
+    return { ...response, data: mappedData } as any;
+  }
+
+  return response;
 }
 
 /**
