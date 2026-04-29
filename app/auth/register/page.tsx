@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { CloudSun, Eye, EyeOff, CheckCircle, AlertCircle } from "lucide-react"
-import { authService } from "@/lib/api"
+import { createClient } from "@/lib/supabase/client"
 
 const userRoles = [
   { value: "resident", label: "Local Resident", description: "Access general forecasts and public alerts" },
@@ -55,43 +55,34 @@ export default function RegisterPage() {
     setIsLoading(true)
     setError(null)
     
-    const result = await authService.register({
+    const supabase = createClient()
+    const { data, error } = await supabase.auth.signUp({
       email: formData.email,
       password: formData.password,
-      password_confirm: formData.password,
-      first_name: formData.name.split(' ')[0] || formData.name,
-      last_name: formData.name.split(' ').slice(1).join(' ') || '',
-      role: (formData.role || 'resident') as any,
+      options: {
+        data: {
+          full_name: formData.name,
+          first_name: formData.name.split(' ')[0] || formData.name,
+          last_name: formData.name.split(' ').slice(1).join(' ') || '',
+          role: formData.role || 'resident',
+          location: formData.location,
+        },
+      },
     })
     
-    if (!result.success || result.error) {
-      let errMsg = 'Registration failed. Please try again.'
-      if (typeof result.error === 'string') {
-        errMsg = result.error
-      } else if (result.errors) {
-        const fieldErrors = Object.entries(result.errors)
-          .map(([field, msgs]) => `${field}: ${(msgs as string[]).join(', ')}`)
-          .join('; ')
-        errMsg = fieldErrors
-      } else if ((result.error as any)?.message) {
-        errMsg = (result.error as any).message
-      }
-      setError(errMsg)
+    if (error) {
+      setError(error.message || 'Registration failed. Please try again.')
       setIsLoading(false)
       return
     }
     
-    // Auto-login after successful registration
-    const loginResult = await authService.login({
-      email: formData.email,
-      password: formData.password,
-    })
-    
-    if (loginResult.success) {
+    // If session is immediately available, email confirmation is disabled
+    if (data.session) {
       router.replace("/dashboard")
       return
     }
     
+    // Otherwise, user needs to confirm their email
     setSuccess(true)
     setIsLoading(false)
   }
@@ -106,18 +97,29 @@ export default function RegisterPage() {
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent/20">
               <CheckCircle className="h-6 w-6 text-accent" />
             </div>
-            <CardTitle className="text-2xl">Check your email</CardTitle>
+            <CardTitle className="text-2xl">Account created!</CardTitle>
             <CardDescription>
-              We&apos;ve sent a confirmation link to <strong>{formData.email}</strong>. 
-              Please click the link to verify your account.
+              We sent a confirmation link to <strong>{formData.email}</strong>.
+              <br /><br />
+              Please <strong>click the link in your email</strong> to verify your account, then come back and sign in.
             </CardDescription>
           </CardHeader>
-          <CardContent className="text-center">
+          <CardContent className="space-y-3 text-center">
             <Link href="/auth/login">
-              <Button variant="outline" className="w-full">
-                Back to Sign In
+              <Button className="w-full">
+                Go to Sign In
               </Button>
             </Link>
+            <p className="text-xs text-muted-foreground">
+              Didn&apos;t receive the email? Check your spam folder or{" "}
+              <button
+                className="text-primary underline"
+                onClick={() => { setSuccess(false); setFormData({ ...formData, email: "" }) }}
+              >
+                try a different email
+              </button>
+              .
+            </p>
           </CardContent>
         </Card>
       </div>

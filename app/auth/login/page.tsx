@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { CloudSun, Eye, EyeOff, AlertCircle } from "lucide-react"
-import { authService } from "@/lib/api"
+import { createClient } from "@/lib/supabase/client"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -22,33 +22,26 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('[Login] Starting login...')
     setIsLoading(true)
     setError(null)
     
     try {
-      console.log('[Login] Calling authService.login...')
-      const result = await authService.login({
+      const supabase = createClient()
+      const { error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       })
-      console.log('[Login] Result:', result)
       
-      if (!result.success || result.error) {
-        const errMsg = typeof result.error === 'string'
-          ? result.error
-          : (result.error as any)?.message || "Invalid email or password. Please try again."
-        console.log('[Login] Error:', errMsg)
-        setError(errMsg)
+      if (error) {
+        setError(error.message || 'Invalid email or password. Please try again.')
         setIsLoading(false)
         return
       }
       
-      console.log('[Login] Success, redirecting to dashboard...')
+      // Success — refresh and navigate to dashboard
       router.refresh()
       router.replace("/dashboard")
     } catch (err) {
-      console.error('[Login] Exception:', err)
       setError(err instanceof Error ? err.message : 'Network error. Please try again.')
       setIsLoading(false)
     }
