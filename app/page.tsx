@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { weatherService } from "@/lib/api"
+import { Loader2 } from "lucide-react"
 
 const features = [
   {
@@ -80,10 +81,13 @@ export default function LandingPage() {
     windSpeed: number
     rainChance: number
   } | null>(null)
+  const [weatherLoading, setWeatherLoading] = useState(true)
 
   useEffect(() => {
     async function fetchWeather() {
+      setWeatherLoading(true)
       try {
+        // Fetch live weather for Babile (woreda ID 1) as the landing page preview
         const res = await weatherService.getLiveWeather(1)
         if (res.success && res.data) {
           const w = res.data.weather
@@ -96,6 +100,8 @@ export default function LandingPage() {
         }
       } catch {
         // Landing page still works with fallback values
+      } finally {
+        setWeatherLoading(false)
       }
     }
     fetchWeather()
@@ -164,8 +170,12 @@ export default function LandingPage() {
                   <Thermometer className="h-5 w-5 text-chart-4" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{liveWeather ? `${liveWeather.temperature}°C` : "28°C"}</p>
-                  <p className="text-xs text-muted-foreground">Temperature</p>
+                  {weatherLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  ) : (
+                    <p className="text-2xl font-bold">{liveWeather ? `${liveWeather.temperature}°C` : "--"}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">Temperature · Babile</p>
                 </div>
               </CardContent>
             </Card>
@@ -175,7 +185,11 @@ export default function LandingPage() {
                   <Droplets className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{liveWeather ? `${liveWeather.humidity}%` : "65%"}</p>
+                  {weatherLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  ) : (
+                    <p className="text-2xl font-bold">{liveWeather ? `${liveWeather.humidity}%` : "--"}</p>
+                  )}
                   <p className="text-xs text-muted-foreground">Humidity</p>
                 </div>
               </CardContent>
@@ -186,7 +200,11 @@ export default function LandingPage() {
                   <Wind className="h-5 w-5 text-accent" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{liveWeather ? `${liveWeather.windSpeed} km/h` : "12 km/h"}</p>
+                  {weatherLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  ) : (
+                    <p className="text-2xl font-bold">{liveWeather ? `${liveWeather.windSpeed} km/h` : "--"}</p>
+                  )}
                   <p className="text-xs text-muted-foreground">Wind Speed</p>
                 </div>
               </CardContent>
@@ -197,8 +215,12 @@ export default function LandingPage() {
                   <CloudRain className="h-5 w-5 text-chart-1" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{liveWeather ? `${liveWeather.rainChance}%` : "25%"}</p>
-                  <p className="text-xs text-muted-foreground">Rain Chance</p>
+                  {weatherLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  ) : (
+                    <p className="text-2xl font-bold">{liveWeather ? `${liveWeather.rainChance}%` : "--"}</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">Cloud Cover</p>
                 </div>
               </CardContent>
             </Card>

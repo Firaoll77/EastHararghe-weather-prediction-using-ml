@@ -99,8 +99,10 @@ async function refreshAccessToken(): Promise<string | null> {
  * Build URL with query parameters.
  */
 function buildUrl(endpoint: string, params?: RequestOptions['params']): string {
-  // Ensure we don't have double slashes when joining
-  const baseUrl = API_BASE_URL.replace(/\/$/, '');
+  // When API_BASE_URL is empty, use window.location.origin for browser
+  // or a placeholder for SSR (requests are relative via Next.js proxy)
+  const base = API_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+  const baseUrl = base.replace(/\/$/, '');
   const cleanEndpoint = endpoint.replace(/^\//, '');
   const url = new URL(`${baseUrl}/${cleanEndpoint}`);
   

@@ -6,37 +6,39 @@
 // Set NEXT_PUBLIC_API_URL only for production or direct backend access
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL : '';
 
-// API endpoints
+// API endpoints - using /backend/ prefix to route through Next.js proxy
+// which forwards to http://localhost:8000 without conflicting with /app/api/ routes
 export const API_ENDPOINTS = {
   // Authentication & User Profile
   auth: {
-    register: '/api/auth/signup',
-    login: '/api/auth/login',
-    logout: '/api/auth/logout',
-    verify: '/api/auth/verify-token',
-    profile: '/api/auth/profile',
-    createProfile: '/api/auth/create-profile',
+    register: '/backend/api/auth/signup',
+    login: '/backend/api/auth/login',
+    logout: '/backend/api/auth/logout',
+    verify: '/backend/api/auth/verify-token',
+    profile: '/backend/api/auth/profile',
+    createProfile: '/backend/api/auth/create-profile',
   },
   
   // Weather
   weather: {
-    current: '/api/weather/current',
-    predict: '/api/weather/predict',
-    woredas: '/api/weather/woredas',
+    current: '/backend/api/weather/current',
+    predict: '/backend/api/weather/predict',
+    woredas: '/backend/api/weather/woredas',
   },
   
   // Predictions
   predictions: {
-    history: '/api/predictions/history',
+    history: '/backend/api/predictions/history',
   },
   
   // Admin
   admin: {
-    users: '/api/admin/users',
-    predictions: '/api/admin/predictions',
-    systemStatus: '/api/admin/system-status',
+    users: '/backend/api/admin/users',
+    predictions: '/backend/api/admin/predictions',
+    systemStatus: '/backend/api/admin/system-status',
   },
 } as const;
+
 
 
 // Token storage keys
