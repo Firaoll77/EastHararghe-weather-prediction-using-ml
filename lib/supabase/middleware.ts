@@ -48,7 +48,7 @@ export const updateSession = async (request: NextRequest) => {
     url.pathname = "/auth/login"
     const response = NextResponse.redirect(url)
     supabaseResponse.cookies.getAll().forEach((cookie) => {
-      response.cookies.set(cookie.name, cookie.value, cookie.options)
+      response.cookies.set(cookie.name, cookie.value)
     })
     return response
   }
@@ -59,7 +59,7 @@ export const updateSession = async (request: NextRequest) => {
     url.pathname = "/dashboard"
     const response = NextResponse.redirect(url)
     supabaseResponse.cookies.getAll().forEach((cookie) => {
-      response.cookies.set(cookie.name, cookie.value, cookie.options)
+      response.cookies.set(cookie.name, cookie.value)
     })
     return response
   }
