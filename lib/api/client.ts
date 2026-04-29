@@ -1,10 +1,12 @@
 /**
  * API Client for the Weather Prediction Backend.
  * Handles authentication, requests, and error handling.
+ * Uses Supabase for authentication tokens.
  */
 
-import { API_BASE_URL, TOKEN_KEYS, REQUEST_TIMEOUT } from './config';
-import type { ApiResponse, AuthTokens } from './types';
+import { API_BASE_URL, REQUEST_TIMEOUT } from './config';
+import { createClient } from '@/lib/supabase/client';
+import type { ApiResponse } from './types';
 
 // Types for internal use
 interface RequestOptions extends RequestInit {
@@ -14,85 +16,26 @@ interface RequestOptions extends RequestInit {
 }
 
 /**
- * Get stored authentication tokens from localStorage.
+ * Get the current Supabase access token.
  */
-export function getStoredTokens(): AuthTokens | null {
+async function getAccessToken(): Promise<string | null> {
   if (typeof window === 'undefined') return null;
   
-  const access = localStorage.getItem(TOKEN_KEYS.accessToken);
-  const refresh = localStorage.getItem(TOKEN_KEYS.refreshToken);
-  
-  if (access && refresh) {
-    return { access, refresh };
-  }
-  return null;
-}
-
-/**
- * Store authentication tokens in localStorage.
- */
-export function storeTokens(tokens: AuthTokens): void {
-  if (typeof window === 'undefined') return;
-  
-  localStorage.setItem(TOKEN_KEYS.accessToken, tokens.access);
-  localStorage.setItem(TOKEN_KEYS.refreshToken, tokens.refresh);
-}
-
-/**
- * Clear stored authentication tokens.
- */
-export function clearTokens(): void {
-  if (typeof window === 'undefined') return;
-  
-  localStorage.removeItem(TOKEN_KEYS.accessToken);
-  localStorage.removeItem(TOKEN_KEYS.refreshToken);
-}
-
-/**
- * Check if user is authenticated (has valid tokens).
- */
-export function isAuthenticated(): boolean {
-  return getStoredTokens() !== null;
-}
-
-/**
- * Refresh the access token using the refresh token.
- */
-async function refreshAccessToken(): Promise<string | null> {
-  const tokens = getStoredTokens();
-  if (!tokens?.refresh) return null;
-  
   try {
-    const url = buildUrl(API_ENDPOINTS.auth.verify); // Use verify as a fallback for refresh check
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ token: tokens.access }), // Verify current token
-    });
-    
-    if (!response.ok) {
-      clearTokens();
-      return null;
-    }
-    
-    const data = await response.json();
-    
-    if (data.success && data.data?.access) {
-      storeTokens({
-        access: data.data.access,
-        refresh: data.data.refresh || tokens.refresh,
-      });
-      return data.data.access;
-    }
-    
-    clearTokens();
-    return null;
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ?? null;
   } catch {
-    clearTokens();
     return null;
   }
+}
+
+/**
+ * Check if user is authenticated (has a Supabase session).
+ */
+export async function isAuthenticated(): Promise<boolean> {
+  const token = await getAccessToken();
+  return token !== null;
 }
 
 /**
@@ -143,16 +86,16 @@ async function apiRequest<T>(
   
   // Add authorization header if authenticated and not skipped
   if (!skipAuth) {
-    const tokens = getStoredTokens();
-    if (tokens?.access) {
-      (headers as Record<string, string>)['Authorization'] = `Bearer ${tokens.access}`;
+    const token = await getAccessToken();
+    if (token) {
+      (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
     }
   }
-  
+
   // Create abort controller for timeout
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
-  
+
   try {
     console.log(`[API] Requesting: ${url}`, { method: fetchOptions.method || 'GET' });
     let response = await fetch(url, {
@@ -161,30 +104,8 @@ async function apiRequest<T>(
       signal: controller.signal,
     });
     console.log(`[API] Response status: ${response.status}`);
-    
+
     clearTimeout(timeoutId);
-    
-    // Handle 401 - try to refresh token
-    if (response.status === 401 && !skipAuth) {
-      const newToken = await refreshAccessToken();
-      
-      if (newToken) {
-        // Retry with new token
-        (headers as Record<string, string>)['Authorization'] = `Bearer ${newToken}`;
-        
-        response = await fetch(url, {
-          ...fetchOptions,
-          headers,
-        });
-      } else {
-        // Token refresh failed - user needs to log in again
-        return {
-          success: false,
-          error: 'Session expired. Please log in again.',
-          code: 'session_expired',
-        };
-      }
-    }
     
     // Parse response
     const text = await response.text();

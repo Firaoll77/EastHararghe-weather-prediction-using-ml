@@ -1,69 +1,98 @@
 /**
- * Authentication API service.
+ * Authentication API service using Supabase.
  */
 
-import { api, storeTokens, clearTokens, getStoredTokens } from '../client';
-import { API_ENDPOINTS } from '../config';
-import type {
-  ApiResponse,
-  LoginCredentials,
-  LoginResponse,
-  UserRegistrationData,
-  RegistrationResponse,
-  ChangePasswordData,
-  User,
-  UserProfileUpdate,
-} from '../types';
+import { createClient } from '@/lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
-/**
- * Register a new user account.
- */
-export async function register(
-  data: UserRegistrationData
-): Promise<ApiResponse<RegistrationResponse>> {
-  const response = await api.post<RegistrationResponse>(
-    API_ENDPOINTS.auth.register,
-    data,
-    { skipAuth: true }
-  );
-  
-  // Store tokens if registration successful
-  if (response.success && response.data?.tokens) {
-    storeTokens(response.data.tokens);
-  }
-  
-  return response;
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface UserRegistrationData {
+  email: string;
+  password: string;
+  first_name?: string;
+  last_name?: string;
+  role?: 'resident' | 'farmer' | 'government';
+  location?: string;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
 }
 
 /**
- * Log in with email and password.
+ * Register a new user account via Supabase.
+ */
+export async function register(
+  data: UserRegistrationData
+): Promise<ApiResponse<{ user: User | null; needsConfirmation: boolean }>> {
+  const supabase = createClient();
+
+  const { data: authData, error } = await supabase.auth.signUp({
+    email: data.email,
+    password: data.password,
+    options: {
+      data: {
+        first_name: data.first_name || '',
+        last_name: data.last_name || '',
+        role: data.role || 'resident',
+        location: data.location || '',
+      },
+    },
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return {
+    success: true,
+    data: {
+      user: authData.user,
+      needsConfirmation: !authData.session,
+    },
+  };
+}
+
+/**
+ * Log in with email and password via Supabase.
  */
 export async function login(
   credentials: LoginCredentials
-): Promise<ApiResponse<LoginResponse>> {
-  const response = await api.post<LoginResponse>(
-    API_ENDPOINTS.auth.login,
-    credentials,
-    { skipAuth: true }
-  );
-  
-  // Store tokens if login successful
-  if (response.success && response.data) {
-    storeTokens({
-      access: response.data.access,
-      refresh: response.data.refresh || '', // Refresh token might not be returned by demo login
-    });
+): Promise<ApiResponse<{ user: User | null }>> {
+  const supabase = createClient();
+
+  const { data: authData, error } = await supabase.auth.signInWithPassword({
+    email: credentials.email,
+    password: credentials.password,
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
   }
-  
-  return response;
+
+  return {
+    success: true,
+    data: { user: authData.user },
+  };
 }
 
 /**
  * Log out the current user.
  */
 export async function logout(): Promise<ApiResponse<{ message: string }>> {
-  // Backend doesn't have a logout endpoint, so we just clear tokens
-  clearTokens();
+  const supabase = createClient();
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
   return { success: true, data: { message: 'Logged out' } };
 }
 
@@ -71,32 +100,57 @@ export async function logout(): Promise<ApiResponse<{ message: string }>> {
  * Get the current user's profile.
  */
 export async function getProfile(): Promise<ApiResponse<User>> {
-  return api.get<User>(API_ENDPOINTS.auth.profile);
+  const supabase = createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    return { success: false, error: error?.message || 'Not authenticated' };
+  }
+
+  return { success: true, data: user };
 }
 
 /**
  * Update the current user's profile.
  */
 export async function updateProfile(
-  data: UserProfileUpdate
+  updates: { first_name?: string; last_name?: string; location?: string }
 ): Promise<ApiResponse<User>> {
-  // FastAPI backend uses PUT for profile updates
-  return api.put<User>(API_ENDPOINTS.auth.profile, data);
+  const supabase = createClient();
+  const { data: { user }, error } = await supabase.auth.updateUser({
+    data: updates,
+  });
+
+  if (error || !user) {
+    return { success: false, error: error?.message || 'Update failed' };
+  }
+
+  return { success: true, data: user };
 }
 
 /**
  * Change the current user's password.
- * (Not currently supported by demo FastAPI backend)
  */
 export async function changePassword(
-  data: ChangePasswordData
+  newPassword: string
 ): Promise<ApiResponse<{ message: string }>> {
-  return { success: false, error: 'Endpoint not supported' };
+  const supabase = createClient();
+  const { error } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, data: { message: 'Password updated' } };
 }
 
 /**
  * Check if there's a valid session.
  */
-export function hasValidSession(): boolean {
-  return getStoredTokens() !== null;
+export async function hasValidSession(): Promise<boolean> {
+  const supabase = createClient();
+  const { data: { session } } = await supabase.auth.getSession();
+  return session !== null;
 }

@@ -27,9 +27,6 @@ export { API_BASE_URL, API_ENDPOINTS, TOKEN_KEYS } from './config';
 // Re-export client utilities
 export {
   api,
-  getStoredTokens,
-  storeTokens,
-  clearTokens,
   isAuthenticated,
 } from './client';
 
